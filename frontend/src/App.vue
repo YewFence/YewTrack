@@ -39,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import MessageList from './components/MessageList.vue';
 import InputBar from './components/InputBar.vue';
 import type { Message } from './types/message';
@@ -49,7 +49,6 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 const messages = ref<Message[]>([]);
 const deviceId = getDeviceId();
 const isRefreshing = ref(false);
-let pollingInterval: number | null = null;
 
 // 获取消息列表
 async function fetchMessages() {
@@ -143,13 +142,5 @@ async function handleDeleteMessage(messageId: string) {
 // 生命周期钩子
 onMounted(() => {
   fetchMessages();
-  // 每 3 秒轮询一次新消息
-  pollingInterval = window.setInterval(fetchMessages, 3000);
-});
-
-onUnmounted(() => {
-  if (pollingInterval) {
-    clearInterval(pollingInterval);
-  }
 });
 </script>
