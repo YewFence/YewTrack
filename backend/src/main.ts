@@ -9,7 +9,7 @@ import {
   readMessages,
   saveMessage,
   getFilesDirectory,
-} from './utils/csvManager';
+} from './utils/jsonlManager';
 
 const app = express();
 const port = 3000;
