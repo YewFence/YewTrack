@@ -115,10 +115,9 @@
           </button>
 
           <!-- 下载按钮 (仅对图片和视频显示) -->
-          <a
+          <button
             v-if="message.type === 'file' && (isImage(message.fileName) || isVideo(message.fileName))"
-            :href="buildApiUrl(`/api/download/${message.id}`)"
-            :download="message.text"
+            @click="downloadFile(message)"
             class="md:opacity-0 md:group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-blue-100 text-blue-500"
             title="下载文件"
           >
@@ -138,7 +137,7 @@
                 stroke-width="2"
               />
             </svg>
-          </a>
+          </button>
         </div>
       </div>
     </div>
@@ -202,5 +201,41 @@ function formatTime(timestamp: string): string {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+async function downloadFile(message: Message) {
+  try {
+    // 获取文件扩展名
+    const ext = message.fileName?.split('.').pop() || '';
+    const file_type = isImage(message.fileName)
+      ? 'image'
+      : isVideo(message.fileName)
+      ? 'video'
+      : 'file';
+
+    // 使用消息的时间戳生成文件名 (格式: YYYYMMDD_HHMMSS)
+    const date = new Date(message.timestamp);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    const fileName = `${file_type}_${year}.${month}.${day}_${hours}-${minutes}-${seconds}.${ext}`;
+
+    // 下载文件
+    const response = await fetch(buildApiUrl(`/api/download/${message.id}`));
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('下载文件失败:', error);
+  }
 }
 </script>
