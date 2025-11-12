@@ -10,9 +10,11 @@ import {
   saveMessage,
   getFilesDirectory,
 } from './utils/jsonlManager';
+import { startCleanupScheduler } from './utils/cleanupManager';
+import { SERVER_CONFIG, UPLOAD_CONFIG } from './config';
 
 const app = express();
-const port = 3000;
+const port = SERVER_CONFIG.PORT;
 
 // 初始化数据目录
 ensureDataDirectory();
@@ -40,7 +42,7 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   limits: {
-    fileSize: 50 * 1024 * 1024, // 50MB 限制
+    fileSize: UPLOAD_CONFIG.MAX_FILE_SIZE, // 500MB 限制
   },
 });
 
@@ -119,4 +121,7 @@ app.get('/api/download/:id', (req: Request, res: Response) => {
 // 启动服务器
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
+
+  // 启动数据清理调度器
+  startCleanupScheduler();
 });
