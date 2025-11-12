@@ -80,7 +80,7 @@
         <!-- 删除按钮 -->
         <button
           @click="$emit('delete-message', message.id)"
-          class="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-red-100 text-red-500"
+          class="md:opacity-0 md:group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-red-100 text-red-500"
           title="删除消息"
         >
           <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -97,11 +97,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
 import type { Message } from '../types/message';
 import { buildApiUrl } from '../utils/api';
 
-const props = defineProps<{
+defineProps<{
   messages: Message[];
   currentDeviceId: string;
 }>();
