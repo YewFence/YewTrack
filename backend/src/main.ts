@@ -1,11 +1,15 @@
 import express, { Request, Response } from 'express';
 import { nanoid } from 'nanoid';
 import { Message } from './models/message';
+import cors from 'cors';
 
 const app = express();
 const port = 3000;
 
-// 1. 使用 express.json() 中间件来解析所有传入的 JSON 请求体
+// 使用 cors 中间件，允许所有跨域请求
+// 在开发阶段，这很方便。在生产环境中，你可能需要配置具体的源。
+app.use(cors());
+// 使用 express.json() 中间件来解析所有传入的 JSON 请求体
 app.use(express.json());
 
 // 模拟一个消息列表，暂时存储在内存中 (已更新，加入 sender 和 timestamp)
