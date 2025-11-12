@@ -1,0 +1,8 @@
+export interface Message {
+  id: string;
+  text: string;
+  timestamp: string;
+  type: 'text' | 'file';
+  sender: string;
+  fileName?: string;
+}
