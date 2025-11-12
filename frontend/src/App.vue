@@ -20,7 +20,7 @@ import InputBar from './components/InputBar.vue';
 import type { Message } from './types/message';
 import { getDeviceId } from './utils/deviceId';
 
-const API_BASE = 'http://localhost:3000';
+const API_BASE = ''; // 使用相对路径，由 Nginx 代理
 const messages = ref<Message[]>([]);
 const deviceId = getDeviceId();
 let pollingInterval: number | null = null;

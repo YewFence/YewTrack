@@ -26,7 +26,7 @@
           <!-- 图片预览 -->
           <img
             v-if="isImage(message.fileName)"
-            :src="`http://localhost:3000/api/files/${message.fileName}`"
+            :src="`/api/files/${message.fileName}`"
             :alt="message.text"
             class="max-w-full rounded-lg"
             loading="lazy"
@@ -35,7 +35,7 @@
           <!-- 视频预览 -->
           <video
             v-else-if="isVideo(message.fileName)"
-            :src="`http://localhost:3000/api/files/${message.fileName}`"
+            :src="`/api/files/${message.fileName}`"
             controls
             class="max-w-full rounded-lg"
           />
@@ -43,7 +43,7 @@
           <!-- 其他文件 -->
           <a
             v-else
-            :href="`http://localhost:3000/api/download/${message.id}`"
+            :href="`/api/download/${message.id}`"
             class="flex items-center space-x-2 text-sm hover:underline"
           >
             <svg
