@@ -8,72 +8,89 @@
         message.sender === currentDeviceId ? 'justify-end' : 'justify-start',
       ]"
     >
-      <div
-        :class="[
-          'max-w-[70%] rounded-2xl px-4 py-2 break-words',
-          message.sender === currentDeviceId
-            ? 'bg-blue-500 text-white rounded-br-sm'
-            : 'bg-gray-200 text-gray-800 rounded-bl-sm',
-        ]"
-      >
-        <!-- 文本消息 -->
-        <div v-if="message.type === 'text'" class="text-sm">
-          {{ message.text }}
-        </div>
-
-        <!-- 文件消息 -->
-        <div v-else-if="message.type === 'file'" class="space-y-2">
-          <!-- 图片预览 -->
-          <img
-            v-if="isImage(message.fileName)"
-            :src="buildApiUrl(`/api/files/${message.fileName}`)"
-            :alt="message.text"
-            class="max-w-full rounded-lg"
-            loading="lazy"
-          />
-
-          <!-- 视频预览 -->
-          <video
-            v-else-if="isVideo(message.fileName)"
-            :src="buildApiUrl(`/api/files/${message.fileName}`)"
-            controls
-            class="max-w-full rounded-lg"
-          />
-
-          <!-- 其他文件 -->
-          <a
-            v-else
-            :href="buildApiUrl(`/api/download/${message.id}`)"
-            class="flex items-center space-x-2 text-sm hover:underline"
-          >
-            <svg
-              class="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
-            <span>{{ message.text }}</span>
-          </a>
-        </div>
-
-        <!-- 时间戳 -->
+      <div class="flex items-start space-x-2 group">
         <div
           :class="[
-            'text-xs mt-1',
+            'flex-1 max-w-[70%] rounded-2xl px-4 py-2 break-words',
             message.sender === currentDeviceId
-              ? 'text-blue-100'
-              : 'text-gray-500',
+              ? 'bg-blue-500 text-white rounded-br-sm'
+              : 'bg-gray-200 text-gray-800 rounded-bl-sm',
           ]"
         >
-          {{ formatTime(message.timestamp) }}
+          <!-- 文本消息 -->
+          <div v-if="message.type === 'text'" class="text-sm">
+            {{ message.text }}
+          </div>
+
+          <!-- 文件消息 -->
+          <div v-else-if="message.type === 'file'" class="space-y-2">
+            <!-- 图片预览 -->
+            <img
+              v-if="isImage(message.fileName)"
+              :src="buildApiUrl(`/api/files/${message.fileName}`)"
+              :alt="message.text"
+              class="max-w-full rounded-lg"
+              loading="lazy"
+            />
+
+            <!-- 视频预览 -->
+            <video
+              v-else-if="isVideo(message.fileName)"
+              :src="buildApiUrl(`/api/files/${message.fileName}`)"
+              controls
+              class="max-w-full rounded-lg"
+            />
+
+            <!-- 其他文件 -->
+            <a
+              v-else
+              :href="buildApiUrl(`/api/download/${message.id}`)"
+              class="flex items-center space-x-2 text-sm hover:underline"
+            >
+              <svg
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+              <span>{{ message.text }}</span>
+            </a>
+          </div>
+
+          <!-- 时间戳 -->
+          <div
+            :class="[
+              'text-xs mt-1',
+              message.sender === currentDeviceId
+                ? 'text-blue-100'
+                : 'text-gray-500',
+            ]"
+          >
+            {{ formatTime(message.timestamp) }}
+          </div>
         </div>
+
+        <!-- 删除按钮 -->
+        <button
+          @click="$emit('delete-message', message.id)"
+          class="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-red-100 text-red-500"
+          title="删除消息"
+        >
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+            <path
+              fill-rule="evenodd"
+              d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+              clip-rule="evenodd"
+            />
+          </svg>
+        </button>
       </div>
     </div>
   </div>

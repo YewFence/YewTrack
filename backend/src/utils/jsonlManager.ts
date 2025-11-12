@@ -63,3 +63,41 @@ export function saveMessage(message: Message): void {
 export function getFilesDirectory(): string {
   return path.join(DATA_DIR, 'files');
 }
+
+/**
+ * 删除指定 ID 的消息
+ * @returns 是否成功删除（找到并删除返回 true，未找到返回 false）
+ */
+export function deleteMessage(messageId: string): boolean {
+  ensureDataDirectory();
+
+  const messages = readMessages();
+  const messageToDelete = messages.find((m) => m.id === messageId);
+
+  if (!messageToDelete) {
+    return false; // 消息不存在
+  }
+
+  // 如果是文件消息，同时删除对应的文件
+  if (messageToDelete.type === 'file' && messageToDelete.fileName) {
+    const filePath = path.join(getFilesDirectory(), messageToDelete.fileName);
+    if (fs.existsSync(filePath)) {
+      try {
+        fs.unlinkSync(filePath);
+        console.log(`[Delete] 已删除文件: ${messageToDelete.fileName}`);
+      } catch (error) {
+        console.error(`[Delete] 删除文件失败: ${messageToDelete.fileName}`, error);
+      }
+    }
+  }
+
+  // 过滤掉要删除的消息
+  const remainingMessages = messages.filter((m) => m.id !== messageId);
+
+  // 重写 JSONL 文件
+  const content = remainingMessages.map((msg) => JSON.stringify(msg)).join('\n') + '\n';
+  fs.writeFileSync(MESSAGES_FILE, content, 'utf-8');
+
+  console.log(`[Delete] 已删除消息: ${messageId} (类型: ${messageToDelete.type})`);
+  return true;
+}
