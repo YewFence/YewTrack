@@ -9,6 +9,7 @@ import {
   readMessages,
   saveMessage,
   getFilesDirectory,
+  deleteMessage,
 } from './utils/jsonlManager';
 import { startCleanupScheduler } from './utils/cleanupManager';
 import { SERVER_CONFIG, UPLOAD_CONFIG } from './config';
@@ -116,6 +117,19 @@ app.get('/api/download/:id', (req: Request, res: Response) => {
       res.status(500).json({ error: 'Failed to download file.' });
     }
   });
+});
+
+// 定义 DELETE /api/messages/:id 路由，用于删除消息
+app.delete('/api/messages/:id', (req: Request, res: Response) => {
+  const messageId = req.params.id;
+
+  const success = deleteMessage(messageId);
+
+  if (success) {
+    res.status(200).json({ message: 'Message deleted successfully' });
+  } else {
+    res.status(404).json({ error: 'Message not found' });
+  }
 });
 
 // 启动服务器
