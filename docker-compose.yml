@@ -1,11 +1,10 @@
-version: '3.8'
-
 services:
   backend:
     container_name: yewtrack-backend
     build:
       context: ./backend
       dockerfile: Dockerfile
+    pull_policy: never
     image: yewtrack-backend
     restart: unless-stopped
     volumes:
@@ -20,6 +19,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    pull_policy: never
     image: yewtrack-frontend
     restart: unless-stopped
     ports:
