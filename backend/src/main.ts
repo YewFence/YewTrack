@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import { nanoid } from 'nanoid';
-import { Message } from './models/message.js';
+import { Message } from './models/message';
 import cors from 'cors';
 import multer from 'multer';
 import path from 'path';
@@ -9,7 +9,7 @@ import {
   readMessages,
   saveMessage,
   getFilesDirectory,
-} from './utils/csvManager.js';
+} from './utils/csvManager';
 
 const app = express();
 const port = 3000;
