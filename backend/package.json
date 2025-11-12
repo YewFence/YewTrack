@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "dev": "ts-node-dev --respawn --transpile-only src/main.ts",
+    "build": "tsc -p .",
+    "start": "node dist/main.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -13,12 +15,13 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^5.1.0",
-    "nanoid": "^5.1.6",
-    "tailwindcss": "^4.1.17"
+    "multer": "^1.4.5-lts.2",
+    "nanoid": "^5.1.6"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.5",
+    "@types/multer": "^2.0.0",
     "@types/node": "^24.10.0",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.3"
