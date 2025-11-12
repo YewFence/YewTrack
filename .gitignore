@@ -18,6 +18,9 @@ dist-ssr/
 # Data directory (user-generated content)
 data/
 
+# Environment variables
+.env.local
+
 # Data directory (user-generated content)
 data/
 
