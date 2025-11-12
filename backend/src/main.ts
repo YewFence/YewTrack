@@ -95,6 +95,27 @@ app.post('/api/upload', upload.single('file'), (req: Request, res: Response) => 
   res.status(201).json(fileMessage);
 });
 
+// 定义 GET /api/download/:id 路由，用于下载文件（带正确文件名）
+app.get('/api/download/:id', (req: Request, res: Response) => {
+  const messageId = req.params.id;
+  const messages = readMessages();
+  const message = messages.find((m) => m.id === messageId);
+
+  if (!message || message.type !== 'file' || !message.fileName) {
+    return res.status(404).json({ error: 'File not found.' });
+  }
+
+  const filePath = path.join(getFilesDirectory(), message.fileName);
+
+  // 设置正确的文件名（不带前缀）
+  res.download(filePath, message.text, (err) => {
+    if (err) {
+      console.error('Download error:', err);
+      res.status(500).json({ error: 'Failed to download file.' });
+    }
+  });
+});
+
 // 启动服务器
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);

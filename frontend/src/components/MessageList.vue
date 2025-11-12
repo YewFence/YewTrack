@@ -43,8 +43,7 @@
           <!-- 其他文件 -->
           <a
             v-else
-            :href="`http://localhost:3000/api/files/${message.fileName}`"
-            :download="message.text"
+            :href="`http://localhost:3000/api/download/${message.id}`"
             class="flex items-center space-x-2 text-sm hover:underline"
           >
             <svg
