@@ -18,6 +18,9 @@ dist-ssr/
 # Data directory (user-generated content)
 data/
 
+# Data directory (user-generated content)
+data/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
