@@ -20,7 +20,7 @@ import InputBar from './components/InputBar.vue';
 import type { Message } from './types/message';
 import { getDeviceId } from './utils/deviceId';
 
-const API_BASE = 'http://localhost:3000';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 const messages = ref<Message[]>([]);
 const deviceId = getDeviceId();
 let pollingInterval: number | null = null;
