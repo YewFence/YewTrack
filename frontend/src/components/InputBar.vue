@@ -1,5 +1,28 @@
 <template>
-  <div class="border-t border-gray-200 bg-white p-4">
+  <div class="border-t border-gray-200 bg-white p-4 flex-shrink-0">
+    <!-- 已选文件预览 -->
+    <div v-if="selectedFiles.length > 0" class="mb-3 flex flex-wrap gap-2">
+      <div
+        v-for="(file, index) in selectedFiles"
+        :key="index"
+        class="flex items-center space-x-2 bg-gray-100 rounded-lg px-3 py-2 text-sm"
+      >
+        <span class="truncate max-w-[200px]">{{ file.name }}</span>
+        <button
+          @click="removeFile(index)"
+          class="text-gray-500 hover:text-red-500"
+        >
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+            <path
+              fill-rule="evenodd"
+              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+              clip-rule="evenodd"
+            />
+          </svg>
+        </button>
+      </div>
+    </div>
+
     <div class="flex items-end space-x-2">
       <!-- 文件上传按钮 -->
       <label
@@ -64,29 +87,6 @@
           />
         </svg>
       </button>
-    </div>
-
-    <!-- 已选文件预览 -->
-    <div v-if="selectedFiles.length > 0" class="mt-3 flex flex-wrap gap-2">
-      <div
-        v-for="(file, index) in selectedFiles"
-        :key="index"
-        class="flex items-center space-x-2 bg-gray-100 rounded-lg px-3 py-2 text-sm"
-      >
-        <span class="truncate max-w-[200px]">{{ file.name }}</span>
-        <button
-          @click="removeFile(index)"
-          class="text-gray-500 hover:text-red-500"
-        >
-          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fill-rule="evenodd"
-              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-              clip-rule="evenodd"
-            />
-          </svg>
-        </button>
-      </div>
     </div>
   </div>
 </template>
