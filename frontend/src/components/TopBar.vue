@@ -1,6 +1,6 @@
 <template>
   <header
-    class="fixed top-0 left-0 right-0 z-50 bg-blue-500 text-white shadow-md flex justify-between items-center px-3 py-2 sm:px-4 sm:py-4"
+    class="bg-blue-500 text-white shadow-md flex justify-between items-center px-3 py-2 sm:px-4 sm:py-4 flex-shrink-0"
   >
     <h1 class="text-base sm:text-xl font-semibold">YewTrack 消息传输</h1>
     <button

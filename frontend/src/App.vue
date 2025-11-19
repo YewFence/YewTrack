@@ -3,12 +3,11 @@
     <!-- 顶部栏 -->
     <TopBar @refresh="handleRefresh" />
 
-    <!-- 消息列表 - 添加顶部 padding 以避免被固定的顶部栏遮挡 -->
+    <!-- 消息列表 -->
     <MessageList
       :messages="messages"
       :currentDeviceId="deviceId"
       @delete-message="handleDeleteMessage"
-      class="mt-12 sm:mt-16"
     />
 
     <!-- 底部输入栏 -->
