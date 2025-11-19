@@ -5,4 +5,5 @@ export interface Message {
   type: 'text' | 'file';
   sender: string;
   fileName?: string;
+  previewFileName?: string;
 }

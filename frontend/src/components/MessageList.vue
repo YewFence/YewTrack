@@ -47,7 +47,7 @@
             <!-- 图片预览 -->
             <img
               v-if="isImage(message.fileName)"
-              :src="buildApiUrl(`/api/files/${message.fileName}`)"
+              :src="getPreviewUrl(message)"
               :alt="message.text"
               class="max-w-[50vw] max-h-[50vh] object-contain rounded-lg"
               loading="lazy"
@@ -56,7 +56,7 @@
             <!-- 视频预览 -->
             <video
               v-else-if="isVideo(message.fileName)"
-              :src="buildApiUrl(`/api/files/${message.fileName}`)"
+              :src="getPreviewUrl(message)"
               controls
               class="max-w-[50vw] max-h-[50vh] rounded-lg"
             />
@@ -155,6 +155,13 @@ defineProps<{
 }>();
 
 const copiedMessageId = ref<string | null>(null);
+
+function getPreviewUrl(message: Message): string {
+  if (message.previewFileName) {
+    return buildApiUrl(`/api/files/preview/${message.previewFileName}`);
+  }
+  return buildApiUrl(`/api/files/${message.fileName}`);
+}
 
 function copyText(event: MouseEvent, messageId: string) {
   const target = event.target as HTMLElement;

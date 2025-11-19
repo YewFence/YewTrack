@@ -9,9 +9,11 @@ import {
   readMessages,
   saveMessage,
   getFilesDirectory,
+  getOriginalFilesDirectory,
   deleteMessage,
 } from './utils/jsonlManager';
 import { startCleanupScheduler } from './utils/cleanupManager';
+import { generatePreview } from './scripts/mediaProcessor';
 import { SERVER_CONFIG, UPLOAD_CONFIG } from './config';
 
 const app = express();
@@ -26,12 +28,15 @@ app.use(cors());
 app.use(express.json());
 
 // 静态文件服务：提供上传的文件
+// 优先尝试从 original 目录服务（用于新上传的文件，且没有预览图或直接访问的情况）
+app.use('/api/files', express.static(getOriginalFilesDirectory()));
+// 然后尝试从 files 根目录服务（用于旧文件，以及访问 preview 目录）
 app.use('/api/files', express.static(getFilesDirectory()));
 
 // 配置 multer 文件上传
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, getFilesDirectory());
+    cb(null, getOriginalFilesDirectory());
   },
   filename: (req, file, cb) => {
     // 修复中文文件名乱码：将 latin1 编码的字符串转换回 buffer，再用 utf8 解码
@@ -77,7 +82,7 @@ app.post('/api/messages', (req: Request, res: Response) => {
 });
 
 // 定义 POST /api/upload 路由，用于上传文件
-app.post('/api/upload', upload.single('file'), (req: Request, res: Response) => {
+app.post('/api/upload', upload.single('file'), async (req: Request, res: Response) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded.' });
   }
@@ -88,6 +93,18 @@ app.post('/api/upload', upload.single('file'), (req: Request, res: Response) => 
     return res.status(400).json({ error: '`sender` is required.' });
   }
 
+  // 生成预览文件
+  let previewFileName: string | undefined;
+  try {
+    const generatedPreview = await generatePreview(req.file.filename, req.file.mimetype);
+    if (generatedPreview) {
+      previewFileName = generatedPreview;
+    }
+  } catch (error) {
+    console.error('Preview generation failed:', error);
+    // 即使预览失败，也继续保存消息
+  }
+
   const fileMessage: Message = {
     id: nanoid(),
     text: req.file.originalname,
@@ -95,6 +112,7 @@ app.post('/api/upload', upload.single('file'), (req: Request, res: Response) => 
     timestamp: new Date().toISOString(),
     type: 'file',
     fileName: req.file.filename,
+    previewFileName,
   };
 
   saveMessage(fileMessage);
@@ -111,7 +129,13 @@ app.get('/api/download/:id', (req: Request, res: Response) => {
     return res.status(404).json({ error: 'File not found.' });
   }
 
-  const filePath = path.join(getFilesDirectory(), message.fileName);
+  // 尝试从 original 目录获取
+  let filePath = path.join(getOriginalFilesDirectory(), message.fileName);
+  
+  // 兼容旧文件：如果 original 里没有，去根目录找
+  if (!fs.existsSync(filePath)) {
+    filePath = path.join(getFilesDirectory(), message.fileName);
+  }
 
   // 设置正确的文件名（不带前缀）
   res.download(filePath, message.text, (err) => {

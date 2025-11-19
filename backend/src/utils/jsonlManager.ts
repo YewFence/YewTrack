@@ -14,8 +14,17 @@ export function ensureDataDirectory(): void {
   }
 
   const filesDir = path.join(DATA_DIR, 'files');
+  const originalDir = path.join(filesDir, 'original');
+  const previewDir = path.join(filesDir, 'preview');
+
   if (!fs.existsSync(filesDir)) {
     fs.mkdirSync(filesDir, { recursive: true });
+  }
+  if (!fs.existsSync(originalDir)) {
+    fs.mkdirSync(originalDir, { recursive: true });
+  }
+  if (!fs.existsSync(previewDir)) {
+    fs.mkdirSync(previewDir, { recursive: true });
   }
 }
 
@@ -65,6 +74,20 @@ export function getFilesDirectory(): string {
 }
 
 /**
+ * 获取源文件存储目录
+ */
+export function getOriginalFilesDirectory(): string {
+  return path.join(getFilesDirectory(), 'original');
+}
+
+/**
+ * 获取预览文件存储目录
+ */
+export function getPreviewFilesDirectory(): string {
+  return path.join(getFilesDirectory(), 'preview');
+}
+
+/**
  * 删除指定 ID 的消息
  * @returns 是否成功删除（找到并删除返回 true，未找到返回 false）
  */
@@ -80,13 +103,33 @@ export function deleteMessage(messageId: string): boolean {
 
   // 如果是文件消息，同时删除对应的文件
   if (messageToDelete.type === 'file' && messageToDelete.fileName) {
-    const filePath = path.join(getFilesDirectory(), messageToDelete.fileName);
+    // 尝试删除源文件 (新路径)
+    let filePath = path.join(getOriginalFilesDirectory(), messageToDelete.fileName);
+    
+    // 如果源文件目录没有，尝试在根目录找 (兼容旧数据)
+    if (!fs.existsSync(filePath)) {
+      filePath = path.join(getFilesDirectory(), messageToDelete.fileName);
+    }
+
     if (fs.existsSync(filePath)) {
       try {
         fs.unlinkSync(filePath);
         console.log(`[Delete] 已删除文件: ${messageToDelete.fileName}`);
       } catch (error) {
         console.error(`[Delete] 删除文件失败: ${messageToDelete.fileName}`, error);
+      }
+    }
+
+    // 删除预览文件
+    if (messageToDelete.previewFileName) {
+      const previewPath = path.join(getPreviewFilesDirectory(), messageToDelete.previewFileName);
+      if (fs.existsSync(previewPath)) {
+        try {
+          fs.unlinkSync(previewPath);
+          console.log(`[Delete] 已删除预览文件: ${messageToDelete.previewFileName}`);
+        } catch (error) {
+          console.error(`[Delete] 删除预览文件失败: ${messageToDelete.previewFileName}`, error);
+        }
       }
     }
   }
