@@ -22,8 +22,9 @@ import MessageList from './components/MessageList.vue';
 import InputBar from './components/InputBar.vue';
 import type { Message } from './types/message';
 import { getDeviceId } from './utils/deviceId';
+import { getApiBaseUrl } from './utils/api';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+const API_BASE = getApiBaseUrl();
 const messages = ref<Message[]>([]);
 const deviceId = getDeviceId();
 let socket: WebSocket | null = null;

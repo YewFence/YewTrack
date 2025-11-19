@@ -30,8 +30,8 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
 
-        # 文件上传大小限制
-        client_max_body_size 500M;
+        # 文件上传大小限制（从环境变量读取）
+        client_max_body_size ${MAX_FILE_SIZE_MB}M;
     }
 
     # 前端静态文件

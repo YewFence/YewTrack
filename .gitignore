@@ -13,13 +13,9 @@ dist-ssr/
 *.local
 .vite/
 # Environment variables
+.env
 .env.local
-
-# Data directory (user-generated content)
-data/
-
-# Environment variables
-.env.local
+.env.*.local
 
 # Data directory (user-generated content)
 data/
