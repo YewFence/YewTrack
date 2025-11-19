@@ -34,6 +34,9 @@ const storage = multer.diskStorage({
     cb(null, getFilesDirectory());
   },
   filename: (req, file, cb) => {
+    // 修复中文文件名乱码：将 latin1 编码的字符串转换回 buffer，再用 utf8 解码
+    file.originalname = Buffer.from(file.originalname, 'latin1').toString('utf8');
+
     // 生成唯一文件名，保留原始扩展名
     const uniqueName = `${nanoid()}-${file.originalname}`;
     cb(null, uniqueName);
