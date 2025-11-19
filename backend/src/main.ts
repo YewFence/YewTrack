@@ -22,7 +22,7 @@ import fs from 'fs';
 
 const app = express();
 const server = createServer(app);
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({ server, path: '/ws' });
 const port = SERVER_CONFIG.PORT;
 
 // 广播消息给所有连接的客户端

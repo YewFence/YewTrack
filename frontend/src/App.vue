@@ -30,10 +30,10 @@ let socket: WebSocket | null = null;
 
 function getWsUrl() {
   if (API_BASE) {
-    return API_BASE.replace(/^http/, 'ws');
+    return API_BASE.replace(/^http/, 'ws') + '/ws';
   }
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${protocol}//${window.location.host}`;
+  return `${protocol}//${window.location.host}/ws`;
 }
 
 function setupWebSocket() {
