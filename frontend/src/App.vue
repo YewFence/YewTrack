@@ -50,8 +50,24 @@ function setupWebSocket() {
       if (data.type === 'new_message') {
         const newMessage = data.payload;
         // 避免重复添加（如果是自己发送的，可能已经添加过了）
-        if (!messages.value.find((m) => m.id === newMessage.id)) {
+        // 如果本地有 'uploading' 状态的同名消息（这里简化处理，实际应该用 ID 匹配，但上传前没有 ID）
+        // 更好的方式是：上传成功后，用真实消息替换临时消息
+        console.log('new message id:', newMessage.id);
+        console.log(messages.value);
+        const existingIndex = messages.value.findIndex((m) => m.id === newMessage.id);
+        if (existingIndex === -1) {
+          console.log('Adding new message', newMessage, 'from WebSocket');
           messages.value.push(newMessage);
+        }
+      } else if (data.type === 'update_message') {
+        const updatedMessage = data.payload;
+        const index = messages.value.findIndex((m) => m.id === updatedMessage.id);
+        if (index !== -1) {
+          // 消息在本地存在，更新它
+          messages.value[index] = updatedMessage;
+        } else {
+          // 消息不存在（其他设备上传的），添加它
+          messages.value.push(updatedMessage);
         }
       } else if (data.type === 'delete_message') {
         const deletedId = data.payload;
@@ -111,6 +127,19 @@ async function sendTextMessage(text: string) {
 // 上传文件
 async function uploadFiles(files: File[]) {
   for (const file of files) {
+    // 创建临时消息
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const tempMessage: Message = {
+      id: tempId,
+      text: file.name,
+      sender: deviceId,
+      timestamp: new Date().toISOString(),
+      type: 'file',
+      fileName: file.name, // 临时显示用
+      previewStatus: 'uploading',
+    };
+    messages.value.push(tempMessage);
+
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -123,11 +152,17 @@ async function uploadFiles(files: File[]) {
 
       if (!response.ok) throw new Error('Failed to upload file');
 
-      const newMessage: Message = await response.json();
-      messages.value.push(newMessage);
+      // 等待响应成功后，移除临时消息
+      await response.json();
+      
+      // 移除临时消息，等待 WebSocket 广播真实消息
+      messages.value = messages.value.filter(m => m.id !== tempId);
+      // 注意：不在这里添加消息，等 WebSocket 的 new_message 事件
     } catch (error) {
       console.error('上传文件失败:', error);
       alert(`上传文件 ${file.name} 失败，请重试`);
+      // 移除失败的临时消息
+      messages.value = messages.value.filter(m => m.id !== tempId);
     }
   }
 }

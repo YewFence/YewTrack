@@ -6,4 +6,5 @@ export interface Message {
   sender: string;
   fileName?: string;
   previewFileName?: string;
+  previewStatus?: 'uploading' | 'pending' | 'completed' | 'failed';
 }

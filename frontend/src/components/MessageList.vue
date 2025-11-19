@@ -44,22 +44,54 @@
 
           <!-- 文件消息 -->
           <div v-else-if="message.type === 'file'" class="space-y-2">
-            <!-- 图片预览 -->
-            <ImagePreview
-              v-if="isImage(message.fileName)"
-              :src="getPreviewUrl(message)"
-              :alt="message.text"
-            />
+            <!-- 预览区域 -->
+            <div class="relative">
+              <!-- 占位符 (上传中 或 预览生成中) -->
+              <div
+                v-if="shouldShowPlaceholder(message)"
+                class="w-64 h-48 bg-gray-200 rounded-lg flex flex-col items-center justify-center text-gray-500 space-y-2"
+              >
+                <svg class="w-8 h-8 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span class="text-sm font-medium">Loading...</span>
+              </div>
 
-            <!-- 视频预览 -->
-            <VideoPreview
-              v-else-if="isVideo(message.fileName)"
-              :src="getPreviewUrl(message)"
-            />
+              <!-- 实际预览 (仅当 previewStatus 为 completed 时显示) -->
+              <template v-else>
+                <!-- 图片预览 -->
+                <ImagePreview
+                  v-if="isImage(message.fileName)"
+                  :src="getPreviewUrl(message)"
+                  :alt="message.text"
+                />
 
-            <!-- 其他文件 -->
+                <!-- 视频预览 -->
+                <VideoPreview
+                  v-else-if="isVideo(message.fileName)"
+                  :src="getPreviewUrl(message)"
+                />
+              </template>
+            </div>
+
+            <!-- 进度条 -->
+            <div v-if="isMedia(message.fileName)" class="w-full max-w-[200px] h-1.5 flex space-x-1">
+              <!-- 第一段：上传状态 -->
+              <div 
+                class="flex-1 rounded-full transition-colors duration-300"
+                :class="message.previewStatus !== 'uploading' ? 'bg-green-500' : 'bg-gray-300'"
+              ></div>
+              <!-- 第二段：预览生成状态 -->
+              <div 
+                class="flex-1 rounded-full transition-colors duration-300"
+                :class="message.previewStatus === 'completed' ? 'bg-green-500' : 'bg-gray-300'"
+              ></div>
+            </div>
+
+            <!-- 其他文件 (非媒体文件) -->
             <a
-              v-else
+              v-if="!isMedia(message.fileName)"
               :href="buildApiUrl(`/api/download/${message.id}`)"
               class="flex items-center space-x-2 text-sm hover:underline"
             >
@@ -112,9 +144,15 @@
 
           <!-- 下载按钮 (仅对图片和视频显示) -->
           <button
-            v-if="message.type === 'file' && (isImage(message.fileName) || isVideo(message.fileName))"
+            v-if="message.type === 'file' && isMedia(message.fileName)"
             @click="downloadFile(message)"
-            class="md:opacity-0 md:group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-blue-100 text-blue-500"
+            :disabled="message.previewStatus === 'uploading'"
+            :class="[
+              'md:opacity-0 md:group-hover:opacity-100 transition-opacity p-1 rounded-full',
+              message.previewStatus === 'uploading' 
+                ? 'text-gray-300 cursor-not-allowed' 
+                : 'hover:bg-blue-100 text-blue-500'
+            ]"
             title="下载文件"
           >
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -173,6 +211,21 @@ function copyText(event: MouseEvent, messageId: string) {
     });
   }
 }
+
+function isMedia(fileName?: string): boolean {
+  return isImage(fileName) || isVideo(fileName);
+}
+
+function shouldShowPlaceholder(message: Message): boolean {
+  if (!isMedia(message.fileName)) return false;
+  // 如果没有 previewStatus（旧消息），或者已完成，不显示占位符
+  if (!message.previewStatus || message.previewStatus === 'completed') return false;
+  // 如果是 failed，也可以显示占位符或者错误图，这里暂时显示占位符
+  // 如果是上传中，或者 pending 状态，显示占位符
+  return message.previewStatus === 'uploading' || message.previewStatus === 'pending';
+}
+
+
 
 function isImage(fileName?: string): boolean {
   if (!fileName) return false;

@@ -67,6 +67,22 @@ export function saveMessage(message: Message): void {
 }
 
 /**
+ * 更新单条消息
+ */
+export function updateMessage(updatedMessage: Message): void {
+  ensureDataDirectory();
+  const messages = readMessages();
+  const index = messages.findIndex((m) => m.id === updatedMessage.id);
+
+  // 如果消息存在，进行更新
+  if (index !== -1) {
+    messages[index] = updatedMessage;
+    const content = messages.map((msg) => JSON.stringify(msg)).join('\n') + '\n';
+    fs.writeFileSync(MESSAGES_FILE, content, 'utf-8');
+  }
+}
+
+/**
  * 获取文件存储目录
  */
 export function getFilesDirectory(): string {

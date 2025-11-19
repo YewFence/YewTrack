@@ -10,6 +10,7 @@ import {
   ensureDataDirectory,
   readMessages,
   saveMessage,
+  updateMessage,
   getFilesDirectory,
   getOriginalFilesDirectory,
   deleteMessage,
@@ -17,6 +18,7 @@ import {
 import { startCleanupScheduler } from './utils/cleanupManager';
 import { generatePreview } from './scripts/mediaProcessor';
 import { SERVER_CONFIG, UPLOAD_CONFIG } from './config';
+import fs from 'fs';
 
 const app = express();
 const server = createServer(app);
@@ -24,7 +26,7 @@ const wss = new WebSocketServer({ server });
 const port = SERVER_CONFIG.PORT;
 
 // 广播消息给所有连接的客户端
-function broadcastMessage(type: 'new_message' | 'delete_message', payload: any) {
+function broadcastMessage(type: 'new_message' | 'delete_message' | 'update_message', payload: any) {
   wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(JSON.stringify({ type, payload }));
@@ -107,18 +109,6 @@ app.post('/api/upload', upload.single('file'), async (req: Request, res: Respons
     return res.status(400).json({ error: '`sender` is required.' });
   }
 
-  // 生成预览文件
-  let previewFileName: string | undefined;
-  try {
-    const generatedPreview = await generatePreview(req.file.filename, req.file.mimetype);
-    if (generatedPreview) {
-      previewFileName = generatedPreview;
-    }
-  } catch (error) {
-    console.error('Preview generation failed:', error);
-    // 即使预览失败，也继续保存消息
-  }
-
   const fileMessage: Message = {
     id: nanoid(),
     text: req.file.originalname,
@@ -126,12 +116,34 @@ app.post('/api/upload', upload.single('file'), async (req: Request, res: Respons
     timestamp: new Date().toISOString(),
     type: 'file',
     fileName: req.file.filename,
-    previewFileName,
+    previewStatus: 'pending', // 初始状态为 pending
   };
 
+  // 先保存并广播消息（第一阶段完成）
   saveMessage(fileMessage);
   broadcastMessage('new_message', fileMessage);
   res.status(201).json(fileMessage);
+
+  // 异步生成预览文件（第二阶段）
+  try {
+    const generatedPreview = await generatePreview(req.file.filename, req.file.mimetype);
+    
+    // 更新消息状态
+    fileMessage.previewStatus = generatedPreview ? 'completed' : 'failed';
+    if (generatedPreview) {
+      fileMessage.previewFileName = generatedPreview;
+    }
+
+    // 保存更新后的消息并广播
+    updateMessage(fileMessage);
+    broadcastMessage('update_message', fileMessage);
+    
+  } catch (error) {
+    console.error('Preview generation failed:', error);
+    fileMessage.previewStatus = 'failed';
+    updateMessage(fileMessage);
+    broadcastMessage('update_message', fileMessage);
+  }
 });
 
 // 定义 GET /api/download/:id 路由，用于下载文件（带正确文件名）
