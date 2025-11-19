@@ -1,4 +1,6 @@
 import express, { Request, Response } from 'express';
+import { createServer } from 'http';
+import { WebSocket, WebSocketServer } from 'ws';
 import { nanoid } from 'nanoid';
 import { Message } from './models/message';
 import cors from 'cors';
@@ -17,7 +19,18 @@ import { generatePreview } from './scripts/mediaProcessor';
 import { SERVER_CONFIG, UPLOAD_CONFIG } from './config';
 
 const app = express();
+const server = createServer(app);
+const wss = new WebSocketServer({ server });
 const port = SERVER_CONFIG.PORT;
+
+// 广播消息给所有连接的客户端
+function broadcastMessage(type: 'new_message' | 'delete_message', payload: any) {
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify({ type, payload }));
+    }
+  });
+}
 
 // 初始化数据目录
 ensureDataDirectory();
@@ -78,6 +91,7 @@ app.post('/api/messages', (req: Request, res: Response) => {
   };
 
   saveMessage(newMessage);
+  broadcastMessage('new_message', newMessage);
   res.status(201).json(newMessage);
 });
 
@@ -116,6 +130,7 @@ app.post('/api/upload', upload.single('file'), async (req: Request, res: Respons
   };
 
   saveMessage(fileMessage);
+  broadcastMessage('new_message', fileMessage);
   res.status(201).json(fileMessage);
 });
 
@@ -153,6 +168,7 @@ app.delete('/api/messages/:id', (req: Request, res: Response) => {
   const success = deleteMessage(messageId);
 
   if (success) {
+    broadcastMessage('delete_message', messageId);
     res.status(200).json({ message: 'Message deleted successfully' });
   } else {
     res.status(404).json({ error: 'Message not found' });
@@ -160,7 +176,7 @@ app.delete('/api/messages/:id', (req: Request, res: Response) => {
 });
 
 // 启动服务器
-app.listen(port, () => {
+server.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 
   // 启动数据清理调度器

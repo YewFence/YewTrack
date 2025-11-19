@@ -16,7 +16,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import TopBar from './components/TopBar.vue';
 import MessageList from './components/MessageList.vue';
 import InputBar from './components/InputBar.vue';
@@ -26,6 +26,47 @@ import { getDeviceId } from './utils/deviceId';
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 const messages = ref<Message[]>([]);
 const deviceId = getDeviceId();
+let socket: WebSocket | null = null;
+
+function getWsUrl() {
+  if (API_BASE) {
+    return API_BASE.replace(/^http/, 'ws');
+  }
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${protocol}//${window.location.host}`;
+}
+
+function setupWebSocket() {
+  const wsUrl = getWsUrl();
+  socket = new WebSocket(wsUrl);
+
+  socket.onopen = () => {
+    console.log('WebSocket connected');
+  };
+
+  socket.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      if (data.type === 'new_message') {
+        const newMessage = data.payload;
+        // 避免重复添加（如果是自己发送的，可能已经添加过了）
+        if (!messages.value.find((m) => m.id === newMessage.id)) {
+          messages.value.push(newMessage);
+        }
+      } else if (data.type === 'delete_message') {
+        const deletedId = data.payload;
+        messages.value = messages.value.filter((m) => m.id !== deletedId);
+      }
+    } catch (error) {
+      console.error('WebSocket message parse error:', error);
+    }
+  };
+
+  socket.onclose = () => {
+    console.log('WebSocket disconnected, reconnecting in 3s...');
+    setTimeout(setupWebSocket, 3000);
+  };
+}
 
 // 获取消息列表
 async function fetchMessages() {
@@ -115,5 +156,12 @@ async function handleDeleteMessage(messageId: string) {
 // 生命周期钩子
 onMounted(() => {
   fetchMessages();
+  setupWebSocket();
+});
+
+onUnmounted(() => {
+  if (socket) {
+    socket.close();
+  }
 });
 </script>
