@@ -119,10 +119,6 @@ app.post('/api/upload', upload.single('file'), async (req: Request, res: Respons
     previewStatus: 'pending', // 初始状态为 pending
   };
 
-  // TEST：延长上传时间用于测试
-  console.log('Simulating upload delay...');
-  await new Promise((resolve) => setTimeout(resolve, 3000));
-  console.log('Simulated upload delay complete.');
   // 先保存并广播消息（第一阶段完成）
   saveMessage(fileMessage);
   broadcastMessage('new_message', fileMessage);
@@ -131,11 +127,6 @@ app.post('/api/upload', upload.single('file'), async (req: Request, res: Respons
   // 异步生成预览文件（第二阶段）
   try {
     const generatedPreview = await generatePreview(req.file.filename, req.file.mimetype);
-
-    // TEST：延长生成时间用于测试
-    console.log('Simulating preview generation delay...');
-    await new Promise((resolve) => setTimeout(resolve, 3000));
-    console.log('Simulated preview generation delay complete.');
     
     // 更新消息状态
     fileMessage.previewStatus = generatedPreview ? 'completed' : 'failed';
