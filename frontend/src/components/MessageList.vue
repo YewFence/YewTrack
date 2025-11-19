@@ -45,20 +45,16 @@
           <!-- 文件消息 -->
           <div v-else-if="message.type === 'file'" class="space-y-2">
             <!-- 图片预览 -->
-            <img
+            <ImagePreview
               v-if="isImage(message.fileName)"
               :src="getPreviewUrl(message)"
               :alt="message.text"
-              class="max-w-[50vw] max-h-[50vh] object-contain rounded-lg"
-              loading="lazy"
             />
 
             <!-- 视频预览 -->
-            <video
+            <VideoPreview
               v-else-if="isVideo(message.fileName)"
               :src="getPreviewUrl(message)"
-              controls
-              class="max-w-[50vw] max-h-[50vh] rounded-lg"
             />
 
             <!-- 其他文件 -->
@@ -148,6 +144,8 @@
 import { ref } from 'vue';
 import type { Message } from '../types/message';
 import { buildApiUrl } from '../utils/api';
+import ImagePreview from './ImagePreview.vue';
+import VideoPreview from './VideoPreview.vue';
 
 defineProps<{
   messages: Message[];
