@@ -17,7 +17,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import TopBar from './components/TopBar.vue';
 import MessageList from './components/MessageList.vue';
 import InputBar from './components/InputBar.vue';
@@ -29,7 +29,9 @@ const API_BASE = getApiBaseUrl();
 const messages = ref<Message[]>([]);
 const deviceId = getDeviceId();
 let socket: WebSocket | null = null;
-const messageListRef = ref<{ scrollToBottom: () => void } | null>(null);
+const messageListRef = ref<{ 
+  scrollToBottom: () => void;
+} | null>(null);
 
 function getWsUrl() {
   if (API_BASE) {
@@ -53,10 +55,6 @@ function setupWebSocket() {
       if (data.type === 'new_message') {
         const newMessage = data.payload;
         // 避免重复添加（如果是自己发送的，可能已经添加过了）
-        // 如果本地有 'uploading' 状态的同名消息（这里简化处理，实际应该用 ID 匹配，但上传前没有 ID）
-        // 更好的方式是：上传成功后，用真实消息替换临时消息
-        console.log('new message id:', newMessage.id);
-        console.log(messages.value);
         const existingIndex = messages.value.findIndex((m) => m.id === newMessage.id);
         if (existingIndex === -1) {
           console.log('Adding new message', newMessage, 'from WebSocket');
@@ -66,7 +64,6 @@ function setupWebSocket() {
         const updatedMessage = data.payload;
         const index = messages.value.findIndex((m) => m.id === updatedMessage.id);
         if (index !== -1) {
-          // 消息在本地存在，更新它
           messages.value[index] = updatedMessage;
         } else {
           // 消息不存在（其他设备上传的），添加它
@@ -93,8 +90,6 @@ async function fetchMessages() {
     const response = await fetch(`${API_BASE}/api/messages`);
     if (!response.ok) throw new Error('Failed to fetch messages');
     messages.value = await response.json();
-    await nextTick();
-    messageListRef.value?.scrollToBottom();
   } catch (error) {
     console.error('获取消息失败:', error);
   }
