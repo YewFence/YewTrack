@@ -98,6 +98,10 @@ async function fetchMessages() {
 // 手动刷新
 async function handleRefresh() {
   await fetchMessages();
+  // 刷新后滚动到底部
+  if (messageListRef.value) {
+    messageListRef.value.scrollToBottom();
+  }
 }
 
 // 发送文本消息
