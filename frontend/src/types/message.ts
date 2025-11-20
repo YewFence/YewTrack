@@ -5,4 +5,6 @@ export interface Message {
   type: 'text' | 'file';
   sender: string;
   fileName?: string;
+  previewFileName?: string;
+  previewStatus?: 'uploading' | 'pending' | 'completed' | 'failed';
 }

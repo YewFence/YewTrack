@@ -1,6 +1,9 @@
 # 使用 Node.js 官方镜像
 FROM node:20-alpine
 
+# 安装 ffmpeg（用于处理多媒体文件）
+RUN apk add --no-cache ffmpeg
+
 # 设置工作目录
 WORKDIR /app
 

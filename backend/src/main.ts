@@ -1,4 +1,6 @@
 import express, { Request, Response } from 'express';
+import { createServer } from 'http';
+import { WebSocket, WebSocketServer } from 'ws';
 import { nanoid } from 'nanoid';
 import { Message } from './models/message';
 import cors from 'cors';
@@ -8,14 +10,29 @@ import {
   ensureDataDirectory,
   readMessages,
   saveMessage,
+  updateMessage,
   getFilesDirectory,
+  getOriginalFilesDirectory,
   deleteMessage,
 } from './utils/jsonlManager';
 import { startCleanupScheduler } from './utils/cleanupManager';
+import { generatePreview } from './scripts/mediaProcessor';
 import { SERVER_CONFIG, UPLOAD_CONFIG } from './config';
+import fs from 'fs';
 
 const app = express();
+const server = createServer(app);
+const wss = new WebSocketServer({ server, path: '/ws' });
 const port = SERVER_CONFIG.PORT;
+
+// 广播消息给所有连接的客户端
+function broadcastMessage(type: 'new_message' | 'delete_message' | 'update_message', payload: any) {
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify({ type, payload }));
+    }
+  });
+}
 
 // 初始化数据目录
 ensureDataDirectory();
@@ -26,12 +43,15 @@ app.use(cors());
 app.use(express.json());
 
 // 静态文件服务：提供上传的文件
+// 优先尝试从 original 目录服务（用于新上传的文件，且没有预览图或直接访问的情况）
+app.use('/api/files', express.static(getOriginalFilesDirectory()));
+// 然后尝试从 files 根目录服务（用于旧文件，以及访问 preview 目录）
 app.use('/api/files', express.static(getFilesDirectory()));
 
 // 配置 multer 文件上传
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, getFilesDirectory());
+    cb(null, getOriginalFilesDirectory());
   },
   filename: (req, file, cb) => {
     // 修复中文文件名乱码：将 latin1 编码的字符串转换回 buffer，再用 utf8 解码
@@ -73,11 +93,12 @@ app.post('/api/messages', (req: Request, res: Response) => {
   };
 
   saveMessage(newMessage);
+  broadcastMessage('new_message', newMessage);
   res.status(201).json(newMessage);
 });
 
 // 定义 POST /api/upload 路由，用于上传文件
-app.post('/api/upload', upload.single('file'), (req: Request, res: Response) => {
+app.post('/api/upload', upload.single('file'), async (req: Request, res: Response) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded.' });
   }
@@ -95,10 +116,34 @@ app.post('/api/upload', upload.single('file'), (req: Request, res: Response) => 
     timestamp: new Date().toISOString(),
     type: 'file',
     fileName: req.file.filename,
+    previewStatus: 'pending', // 初始状态为 pending
   };
 
+  // 先保存并广播消息（第一阶段完成）
   saveMessage(fileMessage);
+  broadcastMessage('new_message', fileMessage);
   res.status(201).json(fileMessage);
+
+  // 异步生成预览文件（第二阶段）
+  try {
+    const generatedPreview = await generatePreview(req.file.filename, req.file.mimetype);
+    
+    // 更新消息状态
+    fileMessage.previewStatus = generatedPreview ? 'completed' : 'failed';
+    if (generatedPreview) {
+      fileMessage.previewFileName = generatedPreview;
+    }
+
+    // 保存更新后的消息并广播
+    updateMessage(fileMessage);
+    broadcastMessage('update_message', fileMessage);
+    
+  } catch (error) {
+    console.error('Preview generation failed:', error);
+    fileMessage.previewStatus = 'failed';
+    updateMessage(fileMessage);
+    broadcastMessage('update_message', fileMessage);
+  }
 });
 
 // 定义 GET /api/download/:id 路由，用于下载文件（带正确文件名）
@@ -111,7 +156,13 @@ app.get('/api/download/:id', (req: Request, res: Response) => {
     return res.status(404).json({ error: 'File not found.' });
   }
 
-  const filePath = path.join(getFilesDirectory(), message.fileName);
+  // 尝试从 original 目录获取
+  let filePath = path.join(getOriginalFilesDirectory(), message.fileName);
+  
+  // 兼容旧文件：如果 original 里没有，去根目录找
+  if (!fs.existsSync(filePath)) {
+    filePath = path.join(getFilesDirectory(), message.fileName);
+  }
 
   // 设置正确的文件名（不带前缀）
   res.download(filePath, message.text, (err) => {
@@ -129,6 +180,7 @@ app.delete('/api/messages/:id', (req: Request, res: Response) => {
   const success = deleteMessage(messageId);
 
   if (success) {
+    broadcastMessage('delete_message', messageId);
     res.status(200).json({ message: 'Message deleted successfully' });
   } else {
     res.status(404).json({ error: 'Message not found' });
@@ -136,7 +188,7 @@ app.delete('/api/messages/:id', (req: Request, res: Response) => {
 });
 
 // 启动服务器
-app.listen(port, () => {
+server.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 
   // 启动数据清理调度器
