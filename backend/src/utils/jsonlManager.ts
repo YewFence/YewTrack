@@ -14,8 +14,17 @@ export function ensureDataDirectory(): void {
   }
 
   const filesDir = path.join(DATA_DIR, 'files');
+  const originalDir = path.join(filesDir, 'original');
+  const previewDir = path.join(filesDir, 'preview');
+
   if (!fs.existsSync(filesDir)) {
     fs.mkdirSync(filesDir, { recursive: true });
+  }
+  if (!fs.existsSync(originalDir)) {
+    fs.mkdirSync(originalDir, { recursive: true });
+  }
+  if (!fs.existsSync(previewDir)) {
+    fs.mkdirSync(previewDir, { recursive: true });
   }
 }
 
@@ -58,10 +67,40 @@ export function saveMessage(message: Message): void {
 }
 
 /**
+ * 更新单条消息
+ */
+export function updateMessage(updatedMessage: Message): void {
+  ensureDataDirectory();
+  const messages = readMessages();
+  const index = messages.findIndex((m) => m.id === updatedMessage.id);
+
+  // 如果消息存在，进行更新
+  if (index !== -1) {
+    messages[index] = updatedMessage;
+    const content = messages.map((msg) => JSON.stringify(msg)).join('\n') + '\n';
+    fs.writeFileSync(MESSAGES_FILE, content, 'utf-8');
+  }
+}
+
+/**
  * 获取文件存储目录
  */
 export function getFilesDirectory(): string {
   return path.join(DATA_DIR, 'files');
+}
+
+/**
+ * 获取源文件存储目录
+ */
+export function getOriginalFilesDirectory(): string {
+  return path.join(getFilesDirectory(), 'original');
+}
+
+/**
+ * 获取预览文件存储目录
+ */
+export function getPreviewFilesDirectory(): string {
+  return path.join(getFilesDirectory(), 'preview');
 }
 
 /**
@@ -80,13 +119,33 @@ export function deleteMessage(messageId: string): boolean {
 
   // 如果是文件消息，同时删除对应的文件
   if (messageToDelete.type === 'file' && messageToDelete.fileName) {
-    const filePath = path.join(getFilesDirectory(), messageToDelete.fileName);
+    // 尝试删除源文件 (新路径)
+    let filePath = path.join(getOriginalFilesDirectory(), messageToDelete.fileName);
+    
+    // 如果源文件目录没有，尝试在根目录找 (兼容旧数据)
+    if (!fs.existsSync(filePath)) {
+      filePath = path.join(getFilesDirectory(), messageToDelete.fileName);
+    }
+
     if (fs.existsSync(filePath)) {
       try {
         fs.unlinkSync(filePath);
         console.log(`[Delete] 已删除文件: ${messageToDelete.fileName}`);
       } catch (error) {
         console.error(`[Delete] 删除文件失败: ${messageToDelete.fileName}`, error);
+      }
+    }
+
+    // 删除预览文件
+    if (messageToDelete.previewFileName) {
+      const previewPath = path.join(getPreviewFilesDirectory(), messageToDelete.previewFileName);
+      if (fs.existsSync(previewPath)) {
+        try {
+          fs.unlinkSync(previewPath);
+          console.log(`[Delete] 已删除预览文件: ${messageToDelete.previewFileName}`);
+        } catch (error) {
+          console.error(`[Delete] 删除预览文件失败: ${messageToDelete.previewFileName}`, error);
+        }
       }
     }
   }
