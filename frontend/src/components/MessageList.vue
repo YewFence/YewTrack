@@ -130,8 +130,9 @@ watch(() => props.messages.length, (newLength, oldLength) => {
           // 用户在底部，自动滚动
           scrollToBottom();
         } else {
-          // 用户不在底部，增加未读计数
-          const newCount = newLength - oldLength;
+          // 用户不在底部，增加未读计数，去除临时消息数量
+          const tempMessageCount = props.messages.filter(msg => msg.id.startsWith('temp-')).length;
+          const newCount = newLength - oldLength - tempMessageCount;
           unreadCount.value += newCount;
         }
       });
