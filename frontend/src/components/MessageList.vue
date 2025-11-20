@@ -96,8 +96,23 @@ const isInitialLoad = ref(true);
 function isAtBottom(): boolean {
   const el = container.value;
   if (!el) return true;
-  const threshold = 100; // 距离底部100px内认为在底部
-  return el.scrollHeight - el.scrollTop - el.clientHeight <= threshold;
+  
+  const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+  
+  // 如果距离底部很近（50px内），认为在底部
+  if (distanceFromBottom <= 50) return true;
+  
+  // 获取所有消息元素
+  const messageElements = el.querySelectorAll('.space-y-3 > div');
+  if (messageElements.length === 0) return true;
+  
+  // 获取最后一个消息的位置
+  const lastMessage = messageElements[messageElements.length - 1] as HTMLElement;
+  const lastMessageTop = lastMessage.offsetTop;
+  const visibleBottom = el.scrollTop + el.clientHeight;
+  
+  // 如果最后一个消息的顶部在可视区域内，认为在底部
+  return lastMessageTop <= visibleBottom;
 }
 
 async function scrollToBottom() {
