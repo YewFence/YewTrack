@@ -28,6 +28,13 @@
       ]"
     >
       <div class="flex items-start space-x-2 group max-w-[70%]">
+        <!-- 其他设备的消息：按钮在左侧 -->
+        <MessageActions
+          v-if="message.sender !== currentDeviceId"
+          :message="message"
+          @delete-message="$emit('delete-message', $event)"
+        />
+
         <div
           :class="[
             'rounded-2xl px-4 py-2 break-words',
@@ -58,7 +65,9 @@
           </div>
         </div>
 
+        <!-- 本设备的消息：按钮在右侧 -->
         <MessageActions
+          v-if="message.sender === currentDeviceId"
           :message="message"
           @delete-message="$emit('delete-message', $event)"
         />

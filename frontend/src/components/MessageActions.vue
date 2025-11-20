@@ -1,9 +1,9 @@
 <template>
-  <div class="flex flex-col space-y-1">
+  <div class="flex flex-col space-y-0.5">
     <!-- 删除按钮 -->
     <button
       @click="$emit('delete-message', message.id)"
-      class="md:opacity-0 md:group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-red-100 text-red-500"
+      class="md:opacity-0 md:group-hover:opacity-100 transition-opacity p-0.5 rounded-full hover:bg-red-100 text-red-500"
       title="删除消息"
     >
       <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
@@ -21,7 +21,7 @@
       @click="downloadFile"
       :disabled="message.previewStatus === 'uploading'"
       :class="[
-        'md:opacity-0 md:group-hover:opacity-100 transition-opacity p-1 rounded-full',
+        'md:opacity-0 md:group-hover:opacity-100 transition-opacity p-0.5 rounded-full',
         message.previewStatus === 'uploading' 
           ? 'text-gray-300 cursor-not-allowed' 
           : 'hover:bg-blue-100 text-blue-500'
