@@ -1,5 +1,24 @@
 <template>
-  <div class="flex-1 overflow-y-auto p-4 space-y-3">
+  <div ref="container" class="flex-1 overflow-y-auto p-4 space-y-3 relative">
+    <!-- 新消息提示按钮 -->
+    <transition
+      enter-active-class="transition-all duration-300 ease-out"
+      leave-active-class="transition-all duration-200 ease-in"
+      enter-from-class="opacity-0 translate-y-2"
+      leave-to-class="opacity-0 translate-y-2"
+    >
+      <button
+        v-if="unreadCount > 0"
+        @click="scrollToBottom"
+        class="fixed bottom-24 left-1/2 transform -translate-x-1/2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg flex items-center space-x-2 z-10 transition-colors"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+        </svg>
+        <span>{{ unreadCount }} 条新消息</span>
+      </button>
+    </transition>
+
     <div
       v-for="message in messages"
       :key="message.id"
@@ -9,6 +28,13 @@
       ]"
     >
       <div class="flex items-start space-x-2 group max-w-[70%]">
+        <!-- 其他设备的消息：按钮在左侧 -->
+        <MessageActions
+          v-if="message.sender !== currentDeviceId"
+          :message="message"
+          @delete-message="$emit('delete-message', $event)"
+        />
+
         <div
           :class="[
             'rounded-2xl px-4 py-2 break-words',
@@ -17,102 +43,16 @@
               : 'bg-gray-200 text-gray-800 rounded-bl-sm',
           ]"
         >
-          <!-- 文本消息 -->
-          <div v-if="message.type === 'text'" class="text-sm relative" @click="copyText($event, message.id)">
-            {{ message.text }}
-            <!-- 复制成功提示 -->
-            <transition
-              enter-active-class="transition-opacity duration-300 ease-in-out"
-              leave-active-class="transition-opacity duration-300 ease-in-out"
-              enter-from-class="opacity-0"
-              leave-to-class="opacity-0"
-            >
-              <div
-                v-if="copiedMessageId === message.id"
-                class="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-3 py-1 rounded-full text-xs flex items-center space-x-1 shadow-lg"
-              >
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path
-                    fill-rule="evenodd"
-                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                    clip-rule="evenodd"
-                  />
-                </svg>
-              </div>
-            </transition>
-          </div>
+          <MessageText v-if="message.type === 'text'" :message="message" />
+          <MessageMedia
+            v-else-if="message.type === 'file' && isMedia(message.fileName)"
+            :message="message"
+          />
+          <MessageFile
+            v-else-if="message.type === 'file'"
+            :message="message"
+          />
 
-          <!-- 文件消息 -->
-          <div v-else-if="message.type === 'file'" class="space-y-2">
-            <!-- 预览区域 -->
-            <div class="relative">
-              <!-- 占位符 (上传中 或 预览生成中) -->
-              <div
-                v-if="shouldShowPlaceholder(message)"
-                class="w-64 h-48 bg-gray-200 rounded-lg flex flex-col items-center justify-center text-gray-500 space-y-2"
-              >
-                <svg class="w-8 h-8 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span class="text-sm font-medium">Loading...</span>
-              </div>
-
-              <!-- 实际预览 (仅当 previewStatus 为 completed 时显示) -->
-              <template v-else>
-                <!-- 图片预览 -->
-                <ImagePreview
-                  v-if="isImage(message.fileName)"
-                  :src="getPreviewUrl(message)"
-                  :alt="message.text"
-                />
-
-                <!-- 视频预览 -->
-                <VideoPreview
-                  v-else-if="isVideo(message.fileName)"
-                  :src="getPreviewUrl(message)"
-                />
-              </template>
-            </div>
-
-            <!-- 进度条 -->
-            <div v-if="isMedia(message.fileName)" class="w-full max-w-[200px] h-1.5 flex space-x-1">
-              <!-- 第一段：上传状态 -->
-              <div 
-                class="flex-1 rounded-full transition-colors duration-300"
-                :class="message.previewStatus !== 'uploading' ? 'bg-green-500' : 'bg-gray-300'"
-              ></div>
-              <!-- 第二段：预览生成状态 -->
-              <div 
-                class="flex-1 rounded-full transition-colors duration-300"
-                :class="message.previewStatus === 'completed' ? 'bg-green-500' : 'bg-gray-300'"
-              ></div>
-            </div>
-
-            <!-- 其他文件 (非媒体文件) -->
-            <a
-              v-if="!isMedia(message.fileName)"
-              :href="buildApiUrl(`/api/download/${message.id}`)"
-              class="flex items-center space-x-2 text-sm hover:underline"
-            >
-              <svg
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              <span>{{ message.text }}</span>
-            </a>
-          </div>
-
-          <!-- 时间戳 -->
           <div
             :class="[
               'text-xs mt-1',
@@ -125,107 +65,111 @@
           </div>
         </div>
 
-        <!-- 操作按钮组 -->
-        <div class="flex flex-col space-y-1">
-          <!-- 删除按钮 -->
-          <button
-            @click="$emit('delete-message', message.id)"
-            class="md:opacity-0 md:group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-red-100 text-red-500"
-            title="删除消息"
-          >
-            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fill-rule="evenodd"
-                d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                clip-rule="evenodd"
-              />
-            </svg>
-          </button>
-
-          <!-- 下载按钮 (仅对图片和视频显示) -->
-          <button
-            v-if="message.type === 'file' && isMedia(message.fileName)"
-            @click="downloadFile(message)"
-            :disabled="message.previewStatus === 'uploading'"
-            :class="[
-              'md:opacity-0 md:group-hover:opacity-100 transition-opacity p-1 rounded-full',
-              message.previewStatus === 'uploading' 
-                ? 'text-gray-300 cursor-not-allowed' 
-                : 'hover:bg-blue-100 text-blue-500'
-            ]"
-            title="下载文件"
-          >
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 4v12m0 0l-4-4m4 4l4-4"
-              />
-              <line
-                x1="4"
-                y1="20"
-                x2="20"
-                y2="20"
-                stroke-linecap="round"
-                stroke-width="2"
-              />
-            </svg>
-          </button>
-        </div>
+        <!-- 本设备的消息：按钮在右侧 -->
+        <MessageActions
+          v-if="message.sender === currentDeviceId"
+          :message="message"
+          @delete-message="$emit('delete-message', $event)"
+        />
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, nextTick, onMounted, onUnmounted, watch } from 'vue';
 import type { Message } from '../types/message';
-import { buildApiUrl } from '../utils/api';
-import ImagePreview from './ImagePreview.vue';
-import VideoPreview from './VideoPreview.vue';
+import MessageText from './MessageText.vue';
+import MessageMedia from './MessageMedia.vue';
+import MessageFile from './MessageFile.vue';
+import MessageActions from './MessageActions.vue';
 
-defineProps<{
+const props = defineProps<{
   messages: Message[];
   currentDeviceId: string;
 }>();
 
-const copiedMessageId = ref<string | null>(null);
+const container = ref<HTMLDivElement | null>(null);
+const unreadCount = ref(0);
+const isInitialLoad = ref(true);
 
-function getPreviewUrl(message: Message): string {
-  if (message.previewFileName) {
-    return buildApiUrl(`/api/files/preview/${message.previewFileName}`);
+function isAtBottom(): boolean {
+  const el = container.value;
+  if (!el) return true;
+  
+  const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+  
+  // 如果距离底部很近（50px内），认为在底部
+  if (distanceFromBottom <= 50) return true;
+  
+  // 获取所有消息元素
+  const messageElements = el.querySelectorAll('.space-y-3 > div');
+  if (messageElements.length === 0) return true;
+  
+  // 获取最后一个消息的位置
+  const lastMessage = messageElements[messageElements.length - 1] as HTMLElement;
+  const lastMessageTop = lastMessage.offsetTop;
+  const visibleBottom = el.scrollTop + el.clientHeight;
+  
+  // 如果最后一个消息的顶部在可视区域内，认为在底部
+  return lastMessageTop <= visibleBottom;
+}
+
+async function scrollToBottom() {
+  await nextTick();
+  const el = container.value;
+  if (!el) return;
+  el.scrollTop = el.scrollHeight;
+  unreadCount.value = 0; // 滚动到底部时清零未读数
+}
+
+function handleScroll() {
+  // 滚动到底部时清零未读数
+  if (isAtBottom()) {
+    unreadCount.value = 0;
   }
-  return buildApiUrl(`/api/files/${message.fileName}`);
 }
 
-function copyText(event: MouseEvent, messageId: string) {
-  const target = event.target as HTMLElement;
-  if (target.tagName.toLowerCase() === 'div') {
-    const text = target.textContent || '';
-    navigator.clipboard.writeText(text).then(() => {
-      copiedMessageId.value = messageId;
-      setTimeout(() => {
-        copiedMessageId.value = null;
-      }, 2000);
-    });
+// 监听消息变化，智能滚动
+watch(() => props.messages.length, (newLength, oldLength) => {
+  if (newLength > oldLength) {
+    // 有新消息
+    if (isInitialLoad.value) {
+      // 初次加载，直接滚动到底部
+      isInitialLoad.value = false;
+      scrollToBottom();
+    } else {
+      // 后续消息，智能判断
+      nextTick(() => {
+        if (isAtBottom()) {
+          // 用户在底部，自动滚动
+          scrollToBottom();
+        } else {
+          // 用户不在底部，增加未读计数，去除临时消息数量
+          const tempMessageCount = props.messages.filter(msg => msg.id.startsWith('temp-')).length;
+          const newCount = newLength - oldLength - tempMessageCount;
+          unreadCount.value += newCount;
+        }
+      });
+    }
   }
-}
+});
 
-function isMedia(fileName?: string): boolean {
-  return isImage(fileName) || isVideo(fileName);
-}
+onMounted(() => {
+  const el = container.value;
+  if (el) {
+    el.addEventListener('scroll', handleScroll);
+  }
+});
 
-function shouldShowPlaceholder(message: Message): boolean {
-  if (!isMedia(message.fileName)) return false;
-  // 如果没有 previewStatus（旧消息），或者已完成，不显示占位符
-  if (!message.previewStatus || message.previewStatus === 'completed') return false;
-  // 如果是 failed，也可以显示占位符或者错误图，这里暂时显示占位符
-  // 如果是上传中，或者 pending 状态，显示占位符
-  return message.previewStatus === 'uploading' || message.previewStatus === 'pending';
-}
+onUnmounted(() => {
+  const el = container.value;
+  if (el) {
+    el.removeEventListener('scroll', handleScroll);
+  }
+});
 
-
+defineExpose({ scrollToBottom });
 
 function isImage(fileName?: string): boolean {
   if (!fileName) return false;
@@ -237,6 +181,10 @@ function isVideo(fileName?: string): boolean {
   if (!fileName) return false;
   const ext = fileName.toLowerCase().split('.').pop();
   return ['mp4', 'webm', 'ogg', 'mov'].includes(ext || '');
+}
+
+function isMedia(fileName?: string): boolean {
+  return isImage(fileName) || isVideo(fileName);
 }
 
 function formatTime(timestamp: string): string {
@@ -261,39 +209,4 @@ function formatTime(timestamp: string): string {
   });
 }
 
-async function downloadFile(message: Message) {
-  try {
-    // 获取文件扩展名
-    const ext = message.fileName?.split('.').pop() || '';
-    const file_type = isImage(message.fileName)
-      ? 'image'
-      : isVideo(message.fileName)
-      ? 'video'
-      : 'file';
-
-    // 使用消息的时间戳生成文件名 (格式: YYYYMMDD_HHMMSS)
-    const date = new Date(message.timestamp);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
-    const fileName = `${file_type}_${year}.${month}.${day}_${hours}-${minutes}-${seconds}.${ext}`;
-
-    // 下载文件
-    const response = await fetch(buildApiUrl(`/api/download/${message.id}`));
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-  } catch (error) {
-    console.error('下载文件失败:', error);
-  }
-}
 </script>
