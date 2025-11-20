@@ -1,5 +1,5 @@
 <template>
-  <div class="flex-1 overflow-y-auto p-4 space-y-3">
+  <div ref="container" class="flex-1 overflow-y-auto p-4 space-y-3">
     <div
       v-for="message in messages"
       :key="message.id"
@@ -179,7 +179,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, nextTick } from 'vue';
 import type { Message } from '../types/message';
 import { buildApiUrl } from '../utils/api';
 import ImagePreview from './ImagePreview.vue';
@@ -191,6 +191,16 @@ defineProps<{
 }>();
 
 const copiedMessageId = ref<string | null>(null);
+const container = ref<HTMLDivElement | null>(null);
+
+async function scrollToBottom() {
+  await nextTick();
+  const el = container.value;
+  if (!el) return;
+  el.scrollTop = el.scrollHeight;
+}
+
+defineExpose({ scrollToBottom });
 
 function getPreviewUrl(message: Message): string {
   if (message.previewFileName) {

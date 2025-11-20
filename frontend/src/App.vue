@@ -5,6 +5,7 @@
 
     <!-- 消息列表 -->
     <MessageList
+      ref="messageListRef"
       :messages="messages"
       :currentDeviceId="deviceId"
       @delete-message="handleDeleteMessage"
@@ -16,7 +17,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, nextTick } from 'vue';
 import TopBar from './components/TopBar.vue';
 import MessageList from './components/MessageList.vue';
 import InputBar from './components/InputBar.vue';
@@ -28,6 +29,7 @@ const API_BASE = getApiBaseUrl();
 const messages = ref<Message[]>([]);
 const deviceId = getDeviceId();
 let socket: WebSocket | null = null;
+const messageListRef = ref<{ scrollToBottom: () => void } | null>(null);
 
 function getWsUrl() {
   if (API_BASE) {
@@ -91,6 +93,8 @@ async function fetchMessages() {
     const response = await fetch(`${API_BASE}/api/messages`);
     if (!response.ok) throw new Error('Failed to fetch messages');
     messages.value = await response.json();
+    await nextTick();
+    messageListRef.value?.scrollToBottom();
   } catch (error) {
     console.error('获取消息失败:', error);
   }
