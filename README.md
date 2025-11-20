@@ -8,26 +8,38 @@
 ## ✨ 功能特性
 
 ### 核心功能
-- 📝 **文本消息发送** - 实时发送和接收文本消息
-- 📎 **文件传输** - 支持上传和接收文件
+- 📝 **文本消息发送** - 快速实时发送和接收文本消息
+- 📎 **文件传输** - 支持大文件上传和下载（默认最大 500MB）
 - 🖼️ **多媒体预览** - 图片、视频在线预览
-- 🔴 **手动刷新** - 右上角刷新按钮立即同步消息
+  - 图片支持点击放大查看
+  - 视频支持在线播放
+- 💬 **消息自动同步** - 基于Websocket的消息同步功能
+- 🔄 **手动刷新** - 顶部工具栏刷新按钮手动立即同步消息
 - 🗑️ **消息删除** - 点击删除按钮手动删除指定消息
-- 📅 **时间戳显示** - 显示消息发送时间/日期
-- 📃 **轮转删除** - 超过保留期限的消息自动删除
+- 📅 **智能时间显示** - 显示消息发送时间/日期
+- 📃 **自动轮转删除** - 超过保留期限的消息和文件自动清理
+
+### UI 特性
+- 🎨 **现代化界面** - 基于 Tailwind CSS 的简洁设计
+- 📱 **响应式布局** - 适配桌面和移动设备
+- 🆔 **设备识别** - 基于 localStorage 的唯一设备 ID
+- ↔️ **消息对齐** - 本设备消息右对齐，其他设备左对齐
+- 🔝 **固定顶栏** - 标题和刷新按钮固定在顶部
+- 📝 **固定输入栏** - 输入框和发送按钮固定在底部
+- 🖼️ **文件预览** - 图片/视频消息显示缩略图和播放器
+- 📥 **下载按钮** - 文件消息提供独立下载按钮
 
 ### 数据管理
-- 💾 **JSONL 存储** - 轻量级消息持久化
-- 🗂️ **文件分离存储** - 文件独立保存在 `data/files/`
-- 🔄 **自动轮转清理**：
-  - 大文件（>100MB）保留 1 天
-  - 小文件（≤100MB）保留 7 天
-  - 文本消息保留 30 天
-- 🕐 **定时任务** - 每小时自动清理过期数据
-
-### 设备识别
-- 🆔 **唯一设备 ID** - 基于 localStorage 自动生成
-- ↔️ **左右布局** - 本设备消息显示在右侧（蓝色），其他设备在左侧（灰色）
+- 💾 **JSONL 存储** - 轻量级消息持久化方案
+- 🗂️ **文件分离存储** - 文件独立保存在 `data/files/` 目录
+  - `original/` - 原始文件
+  - `preview/` - 预览缩略图（未来功能）
+- 🔄 **智能清理策略**（可配置）：
+  - 大文件（>100MB）默认保留 1 天
+  - 小文件（≤100MB）默认保留 7 天
+  - 文本消息默认保留 30 天
+- 🕐 **定时任务** - 默认每小时自动清理过期数据
+- 🔒 **数据持久化** - 数据目录挂载到宿主机，重启不丢失
 
 ## 🚀 快速开始
 
@@ -40,11 +52,10 @@
 ### 安装依赖
 
 ```bash
-# 安装 pnpm（如果未安装）
-npm install -g pnpm
 
-# 安装所有依赖
-pnpm install
+# 安装前后端依赖
+cd frontend;pnpm install
+cd ../backend;pnpm install
 ```
 
 ### 开发模式
@@ -64,19 +75,13 @@ pnpm run dev
 ### 生产部署（Docker）
 
 #### 🔒 安全注意事项
-
-- 本应用未实现用户认证，**仅适用于局域网或受信任的环境**
-- 文件上传限制为可在 `config.ts` 中调整
-- 生产环境建议添加（或者说TODO）：
-  - HTTPS 支持
-  - 用户认证
-  - 文件类型白名单
-  - 请求频率限制
+❗ 本应用未实现用户认证，**仅适用于局域网或受信任的环境**，切勿部署上公网
+> 我个人是在 [Tailscale](https://tailscale.com) 的一个始终在线的设备上使用 Docker 运行的，通过配置[tailscale serve](https://tailscale.com/kb/1312/serve)让同一个tailnet下的设备可以通过MagicDNS访问，非常方便。
 
 
 ```bash
 # 构建并启动容器
-docker-compose up -d
+docker-compose up -d --build
 
 # 查看日志
 docker-compose logs -f
@@ -93,78 +98,87 @@ docker-compose down
 
 ```
 yewtrack/
-├── backend/                 # 后端服务
+├── backend/                      # 后端服务（Express + TypeScript）
 │   ├── src/
-│   │   ├── config.ts        # 配置文件（上传限制、清理策略等）
-│   │   ├── main.ts          # Express 应用入口
-│   │   ├── models/          # 数据模型
-│   │   │   └── message.ts   # Message 接口定义
-│   │   └── utils/           # 工具函数
-│   │       ├── jsonlManager.ts      # JSONL 文件操作
-│   │       ├── cleanupManager.ts    # 数据清理管理
-│   │       └── migrateToJsonl.ts    # CSV 迁移脚本
-│   ├── Dockerfile
-│   └── package.json
+│   │   ├── config.ts             # 配置中心（环境变量解析、默认值）
+│   │   ├── main.ts               # Express 应用入口（路由、中间件）
+│   │   ├── models/               # 数据模型
+│   │   │   └── message.ts        # Message 接口定义
+│   │   ├── scripts/              # 维护脚本
+│   │   │   ├── mediaProcessor.ts    # 媒体处理工具
+│   │   │   └── migrateToJsonl.ts    # 数据迁移脚本
+│   │   └── utils/                # 工具函数
+│   │       ├── jsonlManager.ts   # JSONL 文件读写操作
+│   │       └── cleanupManager.ts # 自动清理任务管理
+│   ├── data/                     # 后端数据目录（开发环境）
+│   │   ├── messages.jsonl        # 消息存储文件
+│   │   └── files/                # 上传的文件
+│   │       ├── original/         # 原始文件
+│   │       └── preview/          # 预览文件（未来功能）
+│   ├── Dockerfile                # 后端容器构建文件
+│   ├── package.json
+│   ├── pnpm-lock.yaml
+│   └── tsconfig.json
 │
-├── frontend/                # 前端应用
+├── frontend/                     # 前端应用（Vue 3 + Vite）
 │   ├── src/
-│   │   ├── App.vue          # 主应用组件
-│   │   ├── components/      # Vue 组件
-│   │   │   ├── MessageList.vue   # 消息列表
-│   │   │   └── InputBar.vue      # 输入栏
-│   │   ├── types/           # TypeScript 类型
-│   │   │   └── message.ts   # Message 类型定义
-│   │   └── utils/           # 工具函数
-│   │       ├── deviceId.ts  # 设备 ID 管理
-│   │       └── api.ts       # API URL 构建
-│   ├── .env.development     # 开发环境配置
-│   ├── .env.production      # 生产环境配置
-│   ├── Dockerfile
-│   ├── nginx.conf           # Nginx 配置
-│   └── package.json
+│   │   ├── App.vue               # 主应用组件
+│   │   ├── main.ts               # 应用入口
+│   │   ├── style.css             # 全局样式
+│   │   ├── components/           # Vue 组件
+│   │   │   ├── TopBar.vue        # 顶部工具栏（标题、刷新按钮）
+│   │   │   ├── MessageList.vue   # 消息列表（滚动、分组）
+│   │   │   ├── InputBar.vue      # 底部输入栏（文本、文件）
+│   │   │   ├── ImagePreview.vue  # 图片预览组件
+│   │   │   ├── VideoPreview.vue  # 视频预览组件
+│   │   │   └── HelloWorld.vue    # 示例组件（可删除）
+│   │   ├── types/                # TypeScript 类型
+│   │   │   └── message.ts        # Message 类型定义
+│   │   └── utils/                # 工具函数
+│   │       ├── deviceId.ts       # 设备 ID 生成和管理
+│   │       └── api.ts            # API URL 构建工具
+│   ├── public/                   # 静态资源
+│   ├── Dockerfile                # 前端容器构建文件
+│   ├── nginx.conf.template       # Nginx 配置模板
+│   ├── index.html
+│   ├── vite.config.ts            # Vite 配置
+│   ├── tailwind.config.js        # Tailwind CSS 配置
+│   ├── postcss.config.js
+│   ├── package.json
+│   ├── pnpm-lock.yaml
+│   └── tsconfig.json
 │
-├── data/                    # 数据目录（自动生成，git已忽略）
-│   ├── messages.jsonl       # 消息存储文件
-│   └── files/               # 上传的文件
+├── data/                         # 数据目录（生产环境，git 已忽略）
+│   ├── messages.jsonl            # 消息存储文件
+│   └── files/                    # 上传的文件
+│       ├── original/             # 原始文件
+│       └── preview/              # 预览文件
 │
-├── docker-compose.yml       # Docker Compose 配置
+├── docker-compose.yml            # Docker Compose 编排配置
+├── .env                          # 环境变量配置（git 已忽略）
+├── .env.production               # 生产环境变量配置
+├── .env.development              # 开发环境变量配置
+├── LICENSE                      
 └── README.md
 ```
 
 ## ⚙️ 配置说明
 
-所有配置项集中在 `backend/src/config.ts`：
+集成在根目录下的.env文件
 
-```typescript
-// 文件上传限制
-MAX_FILE_SIZE: 500MB
+先执行
+`
+cp .env.production .env
+`
+或者
+`
+cp .env.development .env
+`
+- .env.development - 开发环境配置
+- .env.production - 生产环境配置
 
-// 数据清理策略
-LARGE_FILE_RETENTION: 1 天    // >100MB
-SMALL_FILE_RETENTION: 7 天    // ≤100MB
-TEXT_MESSAGE_RETENTION: 30 天
-
-// 清理任务频率
-CLEANUP_INTERVAL: 每 1 小时
-```
-
-### 环境变量配置
-
-**开发环境** (`.env.development`)
-```env
-VITE_API_BASE_URL=http://localhost:3000
-```
-
-**生产环境** (`.env.production`)
-```env
-VITE_API_BASE_URL=
-```
-
-**自定义配置** (`.env.local` - 不会提交到 Git)
-```bash
-cp frontend/.env.example frontend/.env.local
-# 编辑 .env.local 自定义配置
-```
+> 前端配置读取逻辑在 `frontend/vite.config.ts` 和 `frontend/src/utils/api.ts`
+> 后端配置读取逻辑在 `backend/src/config.ts`
 
 ## 🔌 API 端点
 
@@ -211,18 +225,9 @@ docs: 文档更新
 style: 代码格式调整
 refactor: 重构
 test: 测试相关
-chore: 构建/工具链更新
+chore: 工具更新
+build: 构建工具更新
 ```
-
-## 🎨 UI 特性
-
-- ✅ 响应式设计，适配移动端和桌面端
-- ✅ 聊天气泡样式（本设备蓝色，其他设备灰色）
-- ✅ 图片/视频自动预览
-- ✅ 文件下载带原始文件名
-- ✅ 消息时间戳（今天显示时间，其他显示日期）
-- ✅ 删除按钮悬停显示
-- ✅ 刷新按钮旋转动画
 
 ## 📄 许可证
 
