@@ -1,5 +1,5 @@
 <template>
-  <div class="text-sm relative" @click="copyText">
+  <div class="text-sm relative whitespace-pre-wrap break-words" @click="copyText">
     {{ message.text }}
     <transition
       enter-active-class="transition-opacity duration-300 ease-in-out"

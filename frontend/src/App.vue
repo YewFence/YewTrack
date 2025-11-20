@@ -121,8 +121,6 @@ async function sendTextMessage(text: string) {
 
     if (!response.ok) throw new Error('Failed to send message');
 
-    const newMessage: Message = await response.json();
-    messages.value.push(newMessage);
   } catch (error) {
     console.error('发送消息失败:', error);
     alert('发送消息失败，请重试');
