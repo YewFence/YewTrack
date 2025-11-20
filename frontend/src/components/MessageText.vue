@@ -1,6 +1,9 @@
 <template>
-  <div class="text-sm relative whitespace-pre-wrap break-words" @click="copyText">
-    {{ message.text }}
+  <div class="text-sm relative" @click="copyText">
+    <pre
+      class="whitespace-pre-wrap break-words font-inherit leading-normal" 
+      v-html="renderedHtml"
+    ></pre>
     <transition
       enter-active-class="transition-opacity duration-300 ease-in-out"
       leave-active-class="transition-opacity duration-300 ease-in-out"
@@ -25,20 +28,48 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import type { Message } from '../types/message';
 
 const props = defineProps<{ message: Message }>();
 const copied = ref(false);
 
-function copyText(event: MouseEvent) {
-  const target = event.target as HTMLElement;
-  if (target.tagName.toLowerCase() === 'div') {
-    const text = props.message.text || '';
-    navigator.clipboard.writeText(text).then(() => {
-      copied.value = true;
-      setTimeout(() => (copied.value = false), 2000);
-    });
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function linkify(str: string): string {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  let result = '';
+  let lastIndex = 0;
+  for (const match of str.matchAll(urlRegex)) {
+    const url = match[0];
+    const index = match.index || 0;
+    const before = str.slice(lastIndex, index);
+    result += escapeHtml(before);
+    const safeUrl = escapeHtml(url);
+    result += `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="underline text-blue-200 break-all">${safeUrl}</a>`;
+    lastIndex = index + url.length;
   }
+  result += escapeHtml(str.slice(lastIndex));
+  return result;
+}
+
+const renderedHtml = computed(() => linkify(props.message.text || ''));
+
+function copyText(event: MouseEvent) {
+  // 只在点击容器空白区域复制，点击链接不触发
+  const target = event.target as HTMLElement;
+  if (target.tagName.toLowerCase() === 'a') return;
+  const text = props.message.text || '';
+  navigator.clipboard.writeText(text).then(() => {
+    copied.value = true;
+    setTimeout(() => (copied.value = false), 2000);
+  });
 }
 </script>
