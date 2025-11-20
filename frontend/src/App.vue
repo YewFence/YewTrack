@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col h-screen bg-gray-50">
+  <div class="flex flex-col bg-gray-50" :style="rootStyle">
     <!-- 顶部栏 -->
     <TopBar @refresh="handleRefresh" />
 
@@ -17,7 +17,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import TopBar from './components/TopBar.vue';
 import MessageList from './components/MessageList.vue';
 import InputBar from './components/InputBar.vue';
@@ -83,6 +83,20 @@ function setupWebSocket() {
     setTimeout(setupWebSocket, 3000);
   };
 }
+
+// 动态视口高度修复 (移动端地址栏伸缩导致 100vh/h-screen 不准确)
+function setAppHeight() {
+  const h = window.innerHeight;
+  document.documentElement.style.setProperty('--app-height', `${h}px`);
+}
+
+// 根容器样式（使用变量高度 + 安全区域内边距 + 防止过度滚动）
+const rootStyle = computed(() => ({
+  height: 'var(--app-height)',
+  minHeight: 'var(--app-height)',
+  paddingBottom: 'env(safe-area-inset-bottom)',
+  overscrollBehavior: 'contain'
+}));
 
 // 获取消息列表
 async function fetchMessages() {
@@ -194,11 +208,27 @@ async function handleDeleteMessage(messageId: string) {
 onMounted(() => {
   fetchMessages();
   setupWebSocket();
+  setAppHeight();
+  window.addEventListener('resize', setAppHeight);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', setAppHeight);
+  }
 });
 
 onUnmounted(() => {
   if (socket) {
     socket.close();
   }
+  window.removeEventListener('resize', setAppHeight);
+  if (window.visualViewport) {
+    window.visualViewport.removeEventListener('resize', setAppHeight);
+  }
 });
 </script>
+
+<style>
+/* 防止 iOS/部分浏览器拉动出现空白，和滚动条遮挡输入框 */
+html, body { height: 100%; }
+body { overscroll-behavior: contain; }
+</style>
+
