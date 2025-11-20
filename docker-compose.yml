@@ -11,6 +11,8 @@ services:
       - ./data:/app/data
     networks:
       - yewtrack-network
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
 
@@ -23,11 +25,15 @@ services:
     image: yewtrack-frontend
     restart: unless-stopped
     ports:
-      - "8041:80"
+      - "${FRONTEND_PORT:-8041}:80"
     depends_on:
       - backend
     networks:
       - yewtrack-network
+    env_file:
+      - .env
+    environment:
+      - MAX_FILE_SIZE_MB=${MAX_FILE_SIZE_MB:-500}
 
 networks:
   yewtrack-network:
