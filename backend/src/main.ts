@@ -187,9 +187,9 @@ app.delete('/api/messages/:id', (req: Request, res: Response) => {
   }
 });
 
-// 启动服务器
-server.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
+// 启动服务器（绑定到 0.0.0.0 以接受来自 Docker 网络的连接）
+server.listen(port, '0.0.0.0', () => {
+  console.log(`Server running at http://0.0.0.0:${port}`);
 
   // 启动数据清理调度器
   startCleanupScheduler();

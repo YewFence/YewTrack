@@ -1,38 +1,39 @@
 import fs from 'fs';
 import path from 'path';
 import { CLEANUP_CONFIG } from '../config';
-import { readMessages, getFilesDirectory } from './jsonlManager';
+import { readMessages, getFilesDirectory, getOriginalFilesDirectory, getPreviewFilesDirectory } from './jsonlManager';
 import { Message } from '../models/message';
 
 /**
- * 清理过期文件
+ * 清理指定目录中的过期文件
  */
-export function cleanupExpiredFiles(): void {
-  const filesDir = getFilesDirectory();
-  if (!fs.existsSync(filesDir)) {
-    console.log('[Cleanup] 文件目录不存在，跳过清理');
-    return;
-  }
-
-  const now = Date.now();
-  const files = fs.readdirSync(filesDir);
+function cleanupFilesInDirectory(dirPath: string, now: number): { deletedCount: number; deletedSize: number } {
   let deletedCount = 0;
   let deletedSize = 0;
 
+  if (!fs.existsSync(dirPath)) {
+    return { deletedCount, deletedSize };
+  }
+
+  const files = fs.readdirSync(dirPath);
+
   for (const filename of files) {
-    const filePath = path.join(filesDir, filename);
+    const filePath = path.join(dirPath, filename);
     const stats = fs.statSync(filePath);
+
+    // 跳过目录
+    if (stats.isDirectory()) {
+      continue;
+    }
 
     // 计算文件保留时长
     const fileSize = stats.size;
-    const fileAge = now - stats.mtimeMs; // 文件修改时间到现在的时长
+    const fileAge = now - stats.mtimeMs;
 
     let retention: number;
     if (fileSize > CLEANUP_CONFIG.FILES.LARGE_FILE_THRESHOLD) {
-      // 大文件（>100MB）保留 1 天
       retention = CLEANUP_CONFIG.FILES.LARGE_FILE_RETENTION;
     } else {
-      // 小文件（<=100MB）保留 7 天
       retention = CLEANUP_CONFIG.FILES.SMALL_FILE_RETENTION;
     }
 
@@ -51,9 +52,41 @@ export function cleanupExpiredFiles(): void {
     }
   }
 
-  if (deletedCount > 0) {
+  return { deletedCount, deletedSize };
+}
+
+/**
+ * 清理过期文件
+ */
+export function cleanupExpiredFiles(): void {
+  const filesDir = getFilesDirectory();
+  if (!fs.existsSync(filesDir)) {
+    console.log('[Cleanup] 文件目录不存在，跳过清理');
+    return;
+  }
+
+  const now = Date.now();
+  let totalDeletedCount = 0;
+  let totalDeletedSize = 0;
+
+  // 清理 original 目录（新文件存储位置）
+  const originalResult = cleanupFilesInDirectory(getOriginalFilesDirectory(), now);
+  totalDeletedCount += originalResult.deletedCount;
+  totalDeletedSize += originalResult.deletedSize;
+
+  // 清理 preview 目录
+  const previewResult = cleanupFilesInDirectory(getPreviewFilesDirectory(), now);
+  totalDeletedCount += previewResult.deletedCount;
+  totalDeletedSize += previewResult.deletedSize;
+
+  // 清理根目录（兼容旧文件）
+  const rootResult = cleanupFilesInDirectory(filesDir, now);
+  totalDeletedCount += rootResult.deletedCount;
+  totalDeletedSize += rootResult.deletedSize;
+
+  if (totalDeletedCount > 0) {
     console.log(
-      `[Cleanup] 文件清理完成: 删除 ${deletedCount} 个文件，释放 ${formatBytes(deletedSize)} 空间`
+      `[Cleanup] 文件清理完成: 删除 ${totalDeletedCount} 个文件，释放 ${formatBytes(totalDeletedSize)} 空间`
     );
   } else {
     console.log('[Cleanup] 无过期文件需要清理');
